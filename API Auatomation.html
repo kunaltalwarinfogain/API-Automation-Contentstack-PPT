@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scaling Costco QA Velocity: Python API Automation</title>
+    <style>
+        :root {
+            --tenarai-blue: #0A2540;
+            --tenarai-accent: #00D4B2;
+            --costco-red: #E31B23;
+            --text-dark: #2D3748;
+            --bg-light: #F7FAFC;
+            --white: #FFFFFF;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #1A202C;
+            color: var(--text-dark);
+            overflow: hidden;
+        }
+
+        .deck-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .slide {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: var(--bg-light);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 50px 80px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Dark Mode Slide overrides for Slide 6 */
+        .slide.dark-theme {
+            background: var(--tenarai-blue);
+            color: var(--white);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .header .company-logo {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #4A5568;
+            letter-spacing: -0.2px;
+            line-height: 1.2;
+        }
+
+        .slide.dark-theme .header .company-logo {
+            color: #CBD5E0;
+        }
+
+        .header .slide-tag {
+            background: #EDF2F7;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4A5568;
+            text-transform: uppercase;
+        }
+
+        .slide.dark-theme .header .slide-tag {
+            background: rgba(255,255,255,0.1);
+            color: var(--white);
+        }
+
+        .title-area {
+            border-bottom: 2px solid #E2E8F0;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        .slide.dark-theme .title-area {
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+
+        .content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+
+        /* Left-aligned footer to fix overlapping bug shown in image_daca41.png */
+        .footer {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #A0AEC0;
+            border-top: 1px solid #E2E8F0;
+            padding-top: 15px;
+            margin-top: auto;
+        }
+
+        .slide.dark-theme .footer {
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .footer-content {
+            display: flex;
+            gap: 40px;
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 3.2rem;
+            color: var(--tenarai-blue);
+            line-height: 1.2;
+            margin-bottom: 15px;
+            font-weight: 800;
+        }
+
+        h2 {
+            font-size: 2.3rem;
+            color: var(--tenarai-blue);
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        .slide.dark-theme h2 {
+            color: var(--white);
+        }
+
+        p.subtitle {
+            font-size: 1.3rem;
+            color: #4A5568;
+            max-width: 900px;
+            line-height: 1.5;
+            margin-bottom: 25px;
+        }
+
+        .slide.dark-theme p.subtitle {
+            color: #CBD5E0;
+        }
+
+        /* Layout Component Boxes */
+        .pain-container {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .pain-card {
+            background: var(--white);
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.04);
+            flex: 1;
+            border-left: 6px solid var(--costco-red);
+            min-height: 260px;
+        }
+
+        .metric-highlight {
+            font-size: 4.5rem;
+            font-weight: 800;
+            color: var(--costco-red);
+            line-height: 1;
+            margin-bottom: 15px;
+        }
+
+        .matrix-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.04);
+            margin-top: 10px;
+        }
+
+        .matrix-table th {
+            background: var(--tenarai-blue);
+            color: var(--white);
+            padding: 16px 20px;
+            font-size: 1.05rem;
+            text-align: left;
+        }
+
+        .matrix-table td {
+            padding: 16px 20px;
+            border-bottom: 1px solid #E2E8F0;
+            font-size: 1rem;
+            line-height: 1.4;
+        }
+
+        .matrix-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .badge-manual {
+            background: #FFF5F5;
+            color: #C53030;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        .badge-auto {
+            background: #E6FFFA;
+            color: #234E52;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-block;
+            margin-bottom: 5px;
+        }
+
+        /* Pipeline Flow Diagram */
+        .flow-wrapper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            background: var(--white);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+        }
+
+        .flow-node {
+            background: #EDF2F7;
+            padding: 18px 22px;
+            border-radius: 8px;
+            font-weight: 600;
+            color: var(--tenarai-blue);
+            text-align: center;
+            flex: 1;
+            max-width: 230px;
+            border: 2px solid #CBD5E0;
+            font-size: 0.95rem;
+        }
+
+        .flow-node.active-node {
+            background: var(--tenarai-blue);
+            color: var(--white);
+            border-color: var(--tenarai-blue);
+        }
+
+        .flow-arrow {
+            font-size: 1.5rem;
+            color: var(--costco-red);
+            padding: 0 10px;
+        }
+
+        .bullet-list {
+            list-style: none;
+        }
+
+        .bullet-list li {
+            font-size: 1.15rem;
+            margin-bottom: 14px;
+            position: relative;
+            padding-left: 25px;
+            color: #2D3748;
+            line-height: 1.5;
+        }
+
+        .slide.dark-theme .bullet-list li {
+            color: #E2E8F0;
+        }
+
+        .bullet-list li::before {
+            content: "■";
+            position: absolute;
+            left: 0;
+            color: var(--costco-red);
+            font-size: 1rem;
+            top: 1px;
+        }
+
+        /* Movie-style Disclaimer Layout */
+        .movie-disclaimer {
+            background: #FFF5F5;
+            border: 1px solid #FEB2B2;
+            border-radius: 8px;
+            padding: 15px 25px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .movie-disclaimer h4 {
+            color: #9B2C2C;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 700;
+        }
+
+        .movie-disclaimer p {
+            color: #742A2A;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        /* Play Button Card Layout */
+        .video-box-container {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .video-btn-link {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: var(--tenarai-blue);
+            color: var(--white);
+            text-decoration: none;
+            padding: 22px 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(10, 37, 64, 0.15);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        .video-btn-link:hover {
+            transform: scale(1.02);
+            background: #14375A;
+        }
+
+        .play-icon-svg {
+            width: 50px;
+            height: 50px;
+            fill: var(--white);
+            background: var(--costco-red);
+            border-radius: 50%;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(227, 27, 35, 0.4);
+        }
+
+        .video-text-content h3 {
+            font-size: 1.3rem;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .video-text-content p {
+            font-size: 0.95rem;
+            color: #CBD5E0;
+        }
+
+        /* Grid Layout for Enablers Slide */
+        .enabler-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 10px;
+        }
+
+        .enabler-card {
+            background: var(--white);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+            border-top: 4px solid var(--tenarai-blue);
+        }
+
+        .enabler-card h3 {
+            font-size: 1.2rem;
+            color: var(--tenarai-blue);
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .enabler-card p {
+            font-size: 1rem;
+            color: #4A5568;
+            line-height: 1.4;
+        }
+
+        /* Absolute Controls Layout to Prevent Block Overlaps */
+        .controls {
+            position: absolute;
+            bottom: 25px;
+            right: 80px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .control-btn {
+            background: var(--tenarai-blue);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .control-btn:hover {
+            background: #14375A;
+        }
+
+        .slide.dark-theme .control-btn {
+            background: var(--white);
+            color: var(--tenarai-blue);
+        }
+
+        .slide.dark-theme .control-btn:hover {
+            background: #EDF2F7;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="deck-container">
+        
+        <!-- SLIDE 1: TITLE SLIDE -->
+        <div class="slide active" id="slide-1">
+            <div class="header">
+                <div class="company-logo">Tenarai | API Contentstack Automation | 2026</div>
+                <div class="slide-tag">Strategic QA Framework</div>
+            </div>
+            <div class="content">
+                <h1>Scaling QA Velocity:<br>2-Minute API Automation Framework</h1>
+                <p class="subtitle" style="margin-top: 25px;">Replacing repetitive, slow manual work with fast, automated data testing cycles.</p>
+            </div>
+            <div class="footer">
+                <div class="footer-content">
+                    <div>Confidential - Internal Client Review</div>
+                    <div>2026 | Slide 1 of 6</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: HEADACHE & SOLUTION -->
+        <div class="slide" id="slide-2">
+            <div class="header">
+                <div class="company-logo">Tenarai | API Contentstack Automation | 2026</div>
+                <div class="slide-tag">The release bottleneck</div>
+            </div>
+            <div class="title-area">
+                <h2>The Challenge: Costco Market Stack Bottlenecks</h2>
+            </div>
+            <div class="content">
+                <div class="pain-container">
+                    <div class="pain-card">
+                        <div class="metric-highlight">5-20m</div>
+                        <strong style="font-size: 1.25rem; display:block; margin-bottom:12px; color: var(--tenarai-blue);">Current Manual Effort Per Entry</strong>
+                        <p style="font-size: 1.1rem; color: #4A5568; line-height: 1.5;">Testers spend valuable time logging into separate market accounts, searching for records, fixing errors, and waiting on slow save and publish states.</p>
+                    </div>
+                    <div class="flow-arrow" style="font-size: 2.5rem; color: #CBD5E0;">➔</div>
+                    <div class="pain-card" style="border-left-color: var(--tenarai-blue); background: #F8FAFC; box-shadow: none; border: 2px dashed #CBD5E0;">
+                        <div class="metric-highlight" style="color: var(--tenarai-blue);">2 min</div>
+                        <strong style="font-size: 1.25rem; display:block; margin-bottom:12px; color: var(--tenarai-blue);">The Automated Lifecycle Target</strong>
+                        <p style="font-size: 1.1rem; color: #4A5568; line-height: 1.5;">Our custom approach runs data setup, entry processing, and system validation instantly—cutting the wait down significantly.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer">
+                <div class="footer-content">
+                    <div>Confidential - Internal Client Review</div>
+                    <div>2026 | Slide 2 of 6</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: OPERATIONAL VELOCITY MATRIX -->
+        <div class="slide" id="slide-3">
+            <div class="header">
+                <div class="company-logo">Tenarai | API Contentstack Automation | 2026</div>
+                <div class="slide-tag">Operational Velocity Matrix</div>
+            </div>
+            <div class="title-area">
+                <h2>Testing Scope & Capacity Recovery Optimization</h2>
+            </div>
+            <div class="content">
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th>Testing Context</th>
+                            <th>Manual Execution Timeline</th>
+                            <th>Python API Framework Lifecycle</th>
+                            <th>Value Delivered</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Build Acceptance Testing (BAT)</strong></td>
+                            <td><span class="badge-manual">Manual Run</span> Logging in and checking basics manually across markets after updates.</td>
+                            <td><span class="badge-auto">2 Minutes</span> Runs automatically to verify environment health right away.</td>
+                            <td>Provides immediate confirmation on system stability.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Regression Testing Scope</strong></td>
+                            <td><span class="badge-manual">Manual Auditing</span> Double-checking individual content fields and fields row by row.</td>
+                            <td><span class="badge-auto">50% Scope Reduction</span> Automated script logic checks repetitive test cases instantly.</td>
+                            <td>Frees up testers to target critical edge cases instead of manual data entry.</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Regional Updates</strong></td>
+                            <td><span class="badge-manual">Siloed Work</span> Manually editing and publishing content variations across separate markets.</td>
+                            <td><span class="badge-auto">Parallel Updates</span> Script processes text changes across language variants at the same time.</td>
+                            <td>Ensures fast, scalable verification across all target global market stacks.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="footer">
+                <div class="footer-content">
+                    <div>Confidential - Internal Client Review</div>
+                    <div>2026 | Slide 3 of 6</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: THE ARCHITECTURE PIPELINE & RECORDING -->
+        <div class="slide" id="slide-4">
+            <div class="header">
+                <div class="company-logo">Tenarai | API Contentstack Automation | 2026</div>
+                <div class="slide-tag">Live Execution Proof</div>
+            </div>
+            <div class="title-area">
+                <h2>Framework Pipeline & Proof of Concept Run</h2>
+            </div>
+            <div class="content">
+                <!-- Movie-style disclaimer at the top of the content area -->
+                <div class="movie-disclaimer">
+                    <h4>🔒 Environment & Safety Notice</h4>
+                    <p>All framework execution, code development, and script validations were conducted completely within an isolated sandbox environment provided by Contentstack. Zero production tokens, live stores, or active client data configurations were accessed during this engineering phase. Complete safety and path isolation are maintained natively.</p>
+                </div>
+
+                <p class="subtitle" style="font-size: 1.15rem; margin-bottom: 15px;">Our custom approach bypasses slower web user interfaces completely by linking a clean Python backend process directly to safe core data endpoints.</p>
+                
+                <div class="flow-wrapper" style="margin: 10px 0 25px 0; padding: 20px;">
+                    <div class="flow-node active-node" style="font-size: 0.85rem; padding: 12px;">Python Script Logic Framework</div>
+                    <div class="flow-arrow" style="font-size: 1.2rem;">➔</div>
+                    <div class="flow-node" style="font-size: 0.85rem; padding: 12px;">Secure REST API Connection</div>
+                    <div class="flow-arrow" style="font-size: 1.2rem;">➔</div>
+                    <div class="flow-node" style="font-size: 0.85rem; padding: 12px;">Automated Field Verification</div>
+                    <div class="flow-arrow" style="font-size: 1.2rem;">➔</div>
+                    <div class="flow-node active-node" style="font-size: 0.85rem; padding: 12px;">Instant Environmental Publish</div>
+                </div>
+
+                <div class="video-box-container">
+                    <a href="https://drive.google.com/file/d/14oLF_XvDWxlURN6gvNxAD8yBV1oVJUyj/view" target="_blank" class="video-btn-link">
+                        <svg class="play-icon-svg" viewBox="0 0 24 24">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <div class="video-text-content">
+                            <h3>Launch Demo Recording</h3>
+                            <p>Google Meet Captured Session (Google Drive Link)</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="footer">
+                <div class="footer-content">
+                    <div>Confidential - Internal Client Review</div>
+                    <div>2026 | Slide 4 of 6</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: ENABLERS -->
+        <div class="slide" id="slide-5">
+            <div class="header">
+                <div class="company-logo">Tenarai | API Contentstack Automation | 2026</div>
+                <div class="slide-tag">Requirements Roadmap</div>
+            </div>
+            <div class="title-area">
+                <h2>Enablers: Requirements for Costco Environment Transition</h2>
+            </div>
+            <div class="content">
+                <p class="subtitle" style="margin-bottom: 15px;">To successfully adapt and expand this validated Python automation framework across Costco's active environments, the following technical components will be established:</p>
+                
+                <div class="enabler-grid">
+                    <div class="enabler-card">
+                        <h3>🔑 Access Keys & Tokens</h3>
+                        <p>Provision of secure Management Tokens and API Keys mapped to each specific market stack to facilitate authenticated script actions.</p>
+                    </div>
+                    <div class="enabler-card">
+                        <h3>🌐 Environment Setup</h3>
+                        <p>Configuration maps defining targeted testing routes, clean dev sandboxes, and safe validation spaces.</p>
+                    </div>
+                    <div class="enabler-card">
+                        <h3>🔗 Endpoint Configurations</h3>
+                        <p>Mapping baseline parameters (Base URLs and regional API pathways) to accurately organize multiple stacks across varied localized languages.</p>
+                    </div>
+                    <div class="enabler-card">
+                        <h3>📋 Target Baseline References</h3>
+                        <p>Defining clear pre-existing content schemas and standard entries to act as consistent control controls during automated runs.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="footer">
+                <div class="footer-content">
+                    <div>Confidential - Internal Client Review</div>
+                    <div>2026 | Slide 5 of 6</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: ANY QUESTIONS? -->
+        <div class="slide dark-theme" id="slide-6">
+            <div class="header">
+                <div class="company-logo">Tenarai | API Contentstack Automation | 2026</div>
+                <div class="slide-tag">Discussion</div>
+            </div>
+            <div class="content" style="justify-content: center; align-items: center; text-align: center;">
+                <h1 style="color: var(--white); font-size: 4.5rem; letter-spacing: -1px; margin-bottom: 20px;">Any Questions?</h1>
+                <p class="subtitle" style="max-width: 600px;">Thank you for your time. Let's open the floor to discuss scaling metrics, infrastructure migration, or pipeline configurations.</p>
+            </div>
+            <div class="footer">
+                <div class="footer-content">
+                    <div>Confidential - Internal Client Review</div>
+                    <div>2026 | Slide 6 of 6</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NAVIGATION CONTROLS -->
+        <div class="controls">
+            <button class="control-btn" id="prev-btn">◀ Prev</button>
+            <button class="control-btn" id="next-btn">Next ▶</button>
+        </div>
+
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        let currentSlide = 0;
+
+        function showSlide(index) {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (index + slides.length) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }
+
+        document.getElementById('prev-btn').addEventListener('click', () => showSlide(currentSlide - 1));
+        document.getElementById('next-btn').addEventListener('click', () => showSlide(currentSlide + 1));
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') showSlide(currentSlide + 1);
+            if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+        });
+    </script>
+</body>
+</html>
